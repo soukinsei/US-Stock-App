@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 st.title("🇺🇸 美股智慧看盤與損益試算")
-st.markdown("輸入美股代碼，即時分析**週 KD、RSI、成交量放大 3 倍**，並試算您的庫存損益！")
+st.markdown("輸入美股代碼，即時分析**週 KD、RSI、成交量動態（2倍量增 / 0.5倍量縮）**，並試算您的庫存損益！")
 
 # ==========================================
 # 側邊欄：使用者輸入區
@@ -49,11 +49,13 @@ if query_btn or stock_code:
             st.error(f"連線或抓取資料失敗: {e}")
             st.stop()
 
-    # 1. 成交量與 3 倍放大計算
+    # 1. 成交量與 2 倍量增 / 0.5 倍量縮計算
     df['Vol_MA5'] = df['Volume'].rolling(window=5).mean()
     latest_volume = df['Volume'].iloc[-1]
     avg_volume_5 = df['Vol_MA5'].iloc[-2] if len(df) > 5 else latest_volume
-    is_volume_3x = latest_volume >= (avg_volume_5 * 3)
+    
+    is_volume_2x = latest_volume >= (avg_volume_5 * 2)
+    is_volume_shrink_05 = latest_volume <= (avg_volume_5 * 0.5)
 
     # 2. 14 日 RSI 計算
     delta = df['Close'].diff()
@@ -117,10 +119,12 @@ if query_btn or stock_code:
     v_col1.metric("今日成交量", f"{latest_volume:,.0f} 股")
     v_col2.metric("近5日均量", f"{avg_volume_5:,.0f} 股")
 
-    if is_volume_3x:
-        st.warning("🔥 **【成交量警示】** 今日成交量放大達 3 倍以上！")
+    if is_volume_2x:
+        st.warning("🔥 **【成交量警示】** 今日成交量放大達 2 倍以上（量增）！")
+    elif is_volume_shrink_05:
+        st.info("❄️ **【成交量提示】** 今日成交量量縮至 0.5 倍以下（低於 5 日均量的 50%）。")
     else:
-        st.info("💡 **【成交量提示】** 今日成交量未達放大 3 倍標準。")
+        st.info("💡 **【成交量提示】** 今日成交量處於一般常態區間。")
 
     # ==========================================
     # 損益試算結果呈現
