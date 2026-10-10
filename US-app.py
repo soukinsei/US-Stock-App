@@ -40,7 +40,7 @@ if query_btn or stock_code:
     with st.spinner(f"正在載入 {ticker_symbol} 歷史數據..."):
         try:
             stock = yf.Ticker(ticker_symbol)
-            df = stock.history(period="1y")  # 為了計算月均線，拉長至 1 年數據
+            df = stock.history(period="6mo")
             
             if df.empty:
                 st.error(f"⚠️ 查無美股代碼 `{stock_code}` 的資料，請確認美股代碼是否正確（例如 NVIDIA 請輸入 NVDA、蘋果請輸入 AAPL）。")
@@ -88,13 +88,6 @@ if query_btn or stock_code:
     latest_d = df_weekly['D'].iloc[-1]
     prev_k = df_weekly['K'].iloc[-2]
     prev_d = df_weekly['D'].iloc[-2]
-
-    # 4. 月均線計算 (以月收盤為主)
-    df_monthly = df.resample('ME').agg({
-        'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
-    }).dropna()
-    df_monthly['MA5m'] = df_monthly['Close'].rolling(window=5).mean()
-    df_monthly['MA12m'] = df_monthly['Close'].rolling(window=12).mean()
 
     kd_signal = "盤整無交叉"
     signal_color = "normal"
@@ -158,15 +151,14 @@ if query_btn or stock_code:
         p3.metric("未實現損益", f"US$ {gross_profit:+,.2f}", f"{return_rate:+.2f}%")
 
     # ==========================================
-    # 技術分析圖表繪製 (含日/週/月均線、KD、RSI)
+    # 技術指標圖表繪製 (含日/週均線、KD、RSI)
     # ==========================================
     st.markdown("---")
     st.markdown("### 📉 技術指標與均線圖表分析")
     
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📉 收盤價與日均線", 
         "📅 週均線走勢", 
-        "🗓️ 月均線走勢", 
         "📊 週 KD 指標", 
         "📈 14 日 RSI"
     ])
@@ -180,13 +172,9 @@ if query_btn or stock_code:
         st.line_chart(df_weekly[['Close', 'MA5w', 'MA20w']])
 
     with tab3:
-        st.caption("月收盤價走勢與月均線（包含 MA5m、MA12m）")
-        st.line_chart(df_monthly[['Close', 'MA5m', 'MA12m']])
-
-    with tab4:
         st.caption("週 K 線與 D 線雙線對比圖（藍線：K值，橘線：D值）")
         st.line_chart(df_weekly[['K', 'D']])
 
-    with tab5:
+    with tab4:
         st.caption("14 日 RSI 走勢圖（70 以上超買，30 以下超賣）")
         st.line_chart(df['RSI'])
